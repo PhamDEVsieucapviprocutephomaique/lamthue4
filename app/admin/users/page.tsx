@@ -204,29 +204,16 @@ export default function UsersManagementPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      {/* Header */}
+    <>
       <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex justify-between items-center">
+        <div className="px-4 py-4 sm:px-6 lg:px-8">
           <h1 className="text-2xl font-bold text-gray-900">
             Quản lý Người dùng & Phân quyền
           </h1>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-600">
-              Xin chào, <strong>{currentUser?.fullName}</strong>
-            </span>
-            <button
-              onClick={handleLogout}
-              className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-            >
-              Đăng xuất
-            </button>
-          </div>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8 space-y-6">
+      <main className="flex-1 overflow-y-auto px-4 py-6 sm:px-6 lg:px-8 space-y-6">
         {/* Form Thêm/Sửa */}
         {showModal && (
           <div className="bg-white rounded-lg shadow-lg border-2 border-blue-500">
@@ -495,8 +482,6 @@ export default function UsersManagementPage() {
           )}
         </div>
       </main>
-
-
-    </div>
+    </>
   );
 }

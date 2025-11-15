@@ -21,11 +21,11 @@ Danh mục mã hàng: Tạo, sửa, xóa các mã hàng.
 
 Chi tiết định mức: Với mỗi mã hàng, cho phép khai báo định mức NVL (kèm mã NVL).
 
-4. Quy trình Sản xuất (Quét mã QR)
+4. Quy trình Sản xuất 
 
 Giao diện theo dõi tiến độ: Hiển thị trạng thái từng đơn hàng qua các công đoạn (Cắt -> May -> Hoàn thiện -> Kiểm kê).
 
-Giao diện cho Tổ trưởng/Tổ phó: Để quét mã hoàn thành công đoạn. Mỗi công đoạn có một giao diện đơn giản để quét mã đơn hàng và cập nhật trạng thái.
+Giao diện cho Tổ trưởng/Tổ phó: Để quét mã hoàn thành công đoạn. Mỗi công đoạn có một giao diện đơn giản để cập nhật trạng thái.
 
 5. Quản lý Kho Nguyên Vật Liệu (NVL)
 
