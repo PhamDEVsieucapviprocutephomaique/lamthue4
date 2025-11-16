@@ -191,24 +191,13 @@ export default function ProductMaterialsPage() {
   }
 
   return (
-    <>
-      <header className="bg-white shadow">
-        <div className="px-4 py-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-4">
-            <Link href="/admin/products" className="text-blue-600 hover:text-blue-900">
-              ← Quay lại
-            </Link>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Định mức NVL</h1>
-              <p className="text-sm text-gray-600">
-                Sản phẩm: {product.code} - {product.name}
-              </p>
-            </div>
-          </div>
+    <main className="p-6 space-y-6">
+      {/* Thông tin sản phẩm */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="text-sm text-blue-800">
+          <span className="font-semibold">Sản phẩm:</span> {product.code} - {product.name}
         </div>
-      </header>
-
-      <main className="flex-1 overflow-y-auto px-4 py-6 sm:px-6 lg:px-8 space-y-6">
+      </div>
         {showForm && (
           <div className="bg-white rounded-lg shadow-lg border-2 border-blue-500">
             <div className="px-6 py-4 bg-blue-600 flex justify-between items-center">
@@ -354,6 +343,5 @@ export default function ProductMaterialsPage() {
           )}
         </div>
       </main>
-    </>
   );
 }

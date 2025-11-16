@@ -204,16 +204,7 @@ export default function UsersManagementPage() {
   }
 
   return (
-    <>
-      <header className="bg-white shadow">
-        <div className="px-4 py-4 sm:px-6 lg:px-8">
-          <h1 className="text-2xl font-bold text-gray-900">
-            Quản lý Người dùng & Phân quyền
-          </h1>
-        </div>
-      </header>
-
-      <main className="flex-1 overflow-y-auto px-4 py-6 sm:px-6 lg:px-8 space-y-6">
+    <main className="p-6 space-y-6">
         {/* Form Thêm/Sửa */}
         {showModal && (
           <div className="bg-white rounded-lg shadow-lg border-2 border-blue-500">
@@ -482,6 +473,5 @@ export default function UsersManagementPage() {
           )}
         </div>
       </main>
-    </>
   );
 }
