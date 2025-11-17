@@ -6,10 +6,12 @@ export async function GET() {
     const result = await pool.query(
       `SELECT o.*, 
               c.name as customer_name, c.code as customer_code,
+              s.name as store_name, s.code as store_code,
               u.full_name as created_by_name,
               (SELECT COUNT(*) FROM order_items WHERE order_id = o.id) as item_count
        FROM orders o
        LEFT JOIN customers c ON o.customer_id = c.id
+       LEFT JOIN stores s ON o.store_id = s.id
        LEFT JOIN users u ON o.created_by = u.id
        ORDER BY o.created_at DESC`
     );
@@ -34,9 +36,9 @@ export async function POST(request: NextRequest) {
     await client.query('BEGIN');
     
     const body = await request.json();
-    const { order_code, customer_id, order_type, items, created_by } = body;
+    const { order_code, customer_id, store_id, order_type, items, created_by } = body;
 
-    if (!order_code || !customer_id || !items || items.length === 0) {
+    if (!order_code || !items || items.length === 0) {
       return NextResponse.json(
         { error: 'Vui lòng nhập đầy đủ thông tin đơn hàng' },
         { status: 400 }
@@ -51,10 +53,10 @@ export async function POST(request: NextRequest) {
 
     // Tạo đơn hàng với status 'pending' - chờ xác nhận
     const orderResult = await client.query(
-      `INSERT INTO orders (order_code, customer_id, order_type, total_amount, debt_amount, status, created_by, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $4, 'pending', $5, NOW(), NOW())
+      `INSERT INTO orders (order_code, customer_id, store_id, order_type, total_amount, debt_amount, status, created_by, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $5, 'pending', $6, NOW(), NOW())
        RETURNING *`,
-      [order_code, customer_id, order_type, total_amount, created_by]
+      [order_code, customer_id || null, store_id || null, order_type, total_amount, created_by]
     );
 
     const order = orderResult.rows[0];

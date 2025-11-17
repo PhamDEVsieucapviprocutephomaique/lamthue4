@@ -9,6 +9,8 @@ interface Order {
   customer_name: string;
   customer_code: string;
   customer_phone: string;
+  store_id: string | null;
+  store_name: string | null;
   total_amount: number;
   status: string;
   created_at: string;
@@ -165,13 +167,16 @@ export default function FinishedProductsPage() {
         unit_price: item.price,
       }));
 
+      // Xác định export_type dựa vào store_id
+      const export_type = selectedOrder.store_id ? 'to_store' : 'direct_sale';
+
       const res = await fetch('/api/product-exports', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           order_id: selectedOrder.id,
-          store_id: null,
-          export_type: 'direct_sale',
+          store_id: selectedOrder.store_id,
+          export_type: export_type,
           items,
           exported_by: currentUser.id,
         }),

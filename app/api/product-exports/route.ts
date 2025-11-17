@@ -8,12 +8,15 @@ export async function GET() {
       `SELECT pe.*, 
               o.order_code,
               s.name as store_name,
+              s.code as store_code,
               u.full_name as exported_by_name,
+              u2.full_name as received_by_name,
               (SELECT COUNT(*) FROM product_export_items WHERE product_export_id = pe.id) as item_count
        FROM product_exports pe
        LEFT JOIN orders o ON pe.order_id = o.id
        LEFT JOIN stores s ON pe.store_id = s.id
        LEFT JOIN users u ON pe.exported_by = u.id
+       LEFT JOIN users u2 ON pe.received_by = u2.id
        ORDER BY pe.created_at DESC`
     );
 
@@ -56,12 +59,14 @@ export async function POST(request: NextRequest) {
       total_amount += item.quantity * item.unit_price;
     }
 
-    // Tạo phiếu xuất
+    // Tạo phiếu xuất với received_status mặc định là 'pending' nếu xuất cho cửa hàng
+    const received_status = store_id ? 'pending' : null;
+    
     const exportResult = await client.query(
-      `INSERT INTO product_exports (export_code, order_id, store_id, export_type, total_amount, exported_by, export_date, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+      `INSERT INTO product_exports (export_code, order_id, store_id, export_type, total_amount, exported_by, export_date, received_status, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, NOW(), $7, NOW())
        RETURNING *`,
-      [export_code, order_id, store_id || null, export_type, total_amount, exported_by]
+      [export_code, order_id, store_id || null, export_type, total_amount, exported_by, received_status]
     );
 
     const productExport = exportResult.rows[0];
@@ -75,7 +80,7 @@ export async function POST(request: NextRequest) {
         [productExport.id, item.product_id, item.quantity, item.unit_price]
       );
 
-      // Trừ tồn kho thành phẩm (gộp theo product_id)
+      // Trừ tồn kho thành phẩm xưởng (store_id IS NULL)
       await client.query(
         `UPDATE finished_products 
          SET quantity = quantity - $1, updated_at = NOW()
@@ -84,11 +89,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Cập nhật trạng thái đơn hàng sang shipped (đã xuất kho)
-    await client.query(
-      `UPDATE orders SET status = 'shipped', updated_at = NOW() WHERE id = $1`,
-      [order_id]
-    );
+    // Cập nhật trạng thái đơn hàng
+    if (store_id) {
+      // Nếu xuất cho cửa hàng, đánh dấu là in_transit (đang vận chuyển)
+      await client.query(
+        `UPDATE orders SET status = 'in_transit', updated_at = NOW() WHERE id = $1`,
+        [order_id]
+      );
+    } else {
+      // Nếu bán trực tiếp, đánh dấu là shipped
+      await client.query(
+        `UPDATE orders SET status = 'shipped', updated_at = NOW() WHERE id = $1`,
+        [order_id]
+      );
+    }
 
     await client.query('COMMIT');
 

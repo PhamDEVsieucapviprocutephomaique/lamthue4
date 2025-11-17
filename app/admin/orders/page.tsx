@@ -9,6 +9,9 @@ interface Order {
   order_code: string;
   customer_name: string;
   customer_code: string;
+  store_id: string | null;
+  store_name: string | null;
+  store_code: string | null;
   order_type: string;
   total_amount: number;
   debt_amount: number;
@@ -47,14 +50,22 @@ interface MaterialCheck {
   is_sufficient: boolean;
 }
 
+interface Store {
+  id: string;
+  code: string;
+  name: string;
+}
+
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState<'customer' | 'store'>('customer');
   
   const [formData, setFormData] = useState({
     order_code: '',
@@ -83,19 +94,22 @@ export default function OrdersPage() {
 
   const fetchData = async () => {
     try {
-      const [ordersRes, customersRes, productsRes] = await Promise.all([
+      const [ordersRes, customersRes, productsRes, storesRes] = await Promise.all([
         fetch('/api/orders'),
         fetch('/api/customers'),
         fetch('/api/products'),
+        fetch('/api/stores'),
       ]);
 
       const ordersData = await ordersRes.json();
       const customersData = await customersRes.json();
       const productsData = await productsRes.json();
+      const storesData = await storesRes.json();
 
       if (ordersData.success) setOrders(ordersData.orders);
       if (customersData.success) setCustomers(customersData.customers);
       if (productsData.success) setProducts(productsData.products.filter((p: Product) => p.status === 'active'));
+      if (storesData.success) setStores(storesData.stores);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -332,7 +346,11 @@ export default function OrdersPage() {
     }
   };
 
-  const filteredOrders = orders.filter(
+  // Phân loại orders
+  const customerOrders = orders.filter((o) => !o.store_id);
+  const storeOrders = orders.filter((o) => o.store_id);
+
+  const filteredOrders = (activeTab === 'customer' ? customerOrders : storeOrders).filter(
     (o) =>
       o.order_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
       o.customer_name?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -605,12 +623,40 @@ export default function OrdersPage() {
           </button>
         </div>
 
+        {/* Tabs */}
+        <div className="border-b border-gray-200">
+          <div className="flex">
+            <button
+              onClick={() => setActiveTab('customer')}
+              className={`px-6 py-3 font-medium ${
+                activeTab === 'customer'
+                  ? 'border-b-2 border-blue-600 text-blue-600'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Đơn từ khách hàng ({customerOrders.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('store')}
+              className={`px-6 py-3 font-medium ${
+                activeTab === 'store'
+                  ? 'border-b-2 border-blue-600 text-blue-600'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Đơn từ cửa hàng ({storeOrders.length})
+            </button>
+          </div>
+        </div>
+
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Mã đơn</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Khách hàng</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  {activeTab === 'customer' ? 'Khách hàng' : 'Cửa hàng'}
+                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Loại</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">SP</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tổng tiền</th>
@@ -626,7 +672,10 @@ export default function OrdersPage() {
                     {order.order_code}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {order.customer_code} - {order.customer_name}
+                    {activeTab === 'customer' 
+                      ? `${order.customer_code} - ${order.customer_name}`
+                      : `${order.store_code} - ${order.store_name}`
+                    }
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{order.order_type}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{order.item_count}</td>
