@@ -258,3 +258,130 @@ CREATE TABLE payment_requests (
     request_date TIMESTAMP DEFAULT NOW(),
     created_at TIMESTAMP DEFAULT NOW()
 );
+
+
+-- ============================================
+-- MIGRATION: Bổ sung chức năng quản lý cửa hàng
+-- Chỉ tạo bảng, logic xử lý ở tầng application
+-- ============================================
+
+-- HỆ THỐNG ĐÃ CÓ SẴN:
+-- ✅ stores - 4 cửa hàng
+-- ✅ customers (có store_id) - Khách hàng của từng cửa hàng
+-- ✅ finished_products (có store_id) - Kho riêng từng cửa hàng
+-- ✅ orders (có store_id) - Đơn hàng sản xuất (từ cửa hàng gửi xưởng)
+-- ✅ product_exports (có store_id) - Xuất TP từ xưởng cho cửa hàng
+-- ✅ transactions (có store_id) - Thu chi từng cửa hàng
+
+-- WORKFLOW:
+-- 1. Cửa hàng nhận order từ khách → store_customer_orders
+-- 2. Kiểm tra finished_products (store_id) → Logic ở app
+-- 3. Thiếu hàng → Tạo orders (store_id) gửi xưởng → Logic ở app
+-- 4. Xưởng sản xuất → product_exports (store_id)
+-- 5. Cửa hàng xác nhận nhận → Cập nhật finished_products → Logic ở app
+-- 6. Đủ hàng → store_sales bán cho khách
+
+-- ============================================
+-- CÁC BẢNG BỔ SUNG
+-- ============================================
+
+-- 1. Bảng Đơn hàng từ khách tại cửa hàng
+CREATE TABLE store_customer_orders (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    order_code VARCHAR(50) UNIQUE NOT NULL,
+    store_id UUID NOT NULL REFERENCES stores(id),
+    customer_id UUID NOT NULL REFERENCES customers(id),
+    order_date TIMESTAMP DEFAULT NOW(),
+    required_date DATE,
+    status VARCHAR(50) DEFAULT 'pending',
+    total_amount DECIMAL(15,2) DEFAULT 0,
+    notes TEXT,
+    created_by UUID REFERENCES users(id),
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+COMMENT ON TABLE store_customer_orders IS 'Đơn hàng từ khách tại cửa hàng';
+COMMENT ON COLUMN store_customer_orders.status IS 'pending, checking_stock, waiting_production, ready, completed, cancelled';
+
+-- 2. Bảng Chi tiết đơn hàng khách
+CREATE TABLE store_customer_order_items (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    store_customer_order_id UUID NOT NULL REFERENCES store_customer_orders(id) ON DELETE CASCADE,
+    product_id UUID NOT NULL REFERENCES products(id),
+    quantity INTEGER NOT NULL CHECK (quantity > 0),
+    unit_price DECIMAL(15,2) NOT NULL,
+    stock_status VARCHAR(50) DEFAULT 'checking',
+    available_quantity INTEGER DEFAULT 0,
+    shortage_quantity INTEGER DEFAULT 0,
+    production_order_id UUID REFERENCES orders(id),
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+COMMENT ON TABLE store_customer_order_items IS 'Chi tiết sản phẩm trong đơn hàng khách';
+COMMENT ON COLUMN store_customer_order_items.stock_status IS 'checking, in_stock, out_of_stock';
+
+-- 3. Bảng Phiếu bán hàng cho khách
+CREATE TABLE store_sales (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    sale_code VARCHAR(50) UNIQUE NOT NULL,
+    store_customer_order_id UUID NOT NULL REFERENCES store_customer_orders(id),
+    store_id UUID NOT NULL REFERENCES stores(id),
+    customer_id UUID NOT NULL REFERENCES customers(id),
+    sale_date TIMESTAMP DEFAULT NOW(),
+    total_amount DECIMAL(15,2) DEFAULT 0,
+    discount_amount DECIMAL(15,2) DEFAULT 0,
+    final_amount DECIMAL(15,2) DEFAULT 0,
+    payment_method VARCHAR(50),
+    payment_status VARCHAR(50) DEFAULT 'paid',
+    paid_amount DECIMAL(15,2) DEFAULT 0,
+    sold_by UUID REFERENCES users(id),
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+COMMENT ON TABLE store_sales IS 'Phiếu bán hàng cho khách';
+COMMENT ON COLUMN store_sales.payment_method IS 'cash, card, transfer';
+COMMENT ON COLUMN store_sales.payment_status IS 'paid, partial, unpaid';
+
+-- 4. Bảng Chi tiết sản phẩm bán
+CREATE TABLE store_sale_items (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    store_sale_id UUID NOT NULL REFERENCES store_sales(id) ON DELETE CASCADE,
+    product_id UUID NOT NULL REFERENCES products(id),
+    quantity INTEGER NOT NULL CHECK (quantity > 0),
+    unit_price DECIMAL(15,2) NOT NULL,
+    discount_percent DECIMAL(5,2) DEFAULT 0,
+    total_amount DECIMAL(15,2) GENERATED ALWAYS AS (quantity * unit_price * (1 - discount_percent/100)) STORED,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+COMMENT ON TABLE store_sale_items IS 'Chi tiết sản phẩm bán';
+
+-- ============================================
+-- BỔ SUNG TRƯỜNG CHO BẢNG CÓ SẴN
+-- ============================================
+
+-- Thêm trường xác nhận nhận hàng cho product_exports
+ALTER TABLE product_exports ADD COLUMN IF NOT EXISTS received_status VARCHAR(50) DEFAULT 'pending';
+ALTER TABLE product_exports ADD COLUMN IF NOT EXISTS received_by UUID REFERENCES users(id);
+ALTER TABLE product_exports ADD COLUMN IF NOT EXISTS received_at TIMESTAMP;
+
+COMMENT ON COLUMN product_exports.received_status IS 'pending, received, rejected';
+
+-- ============================================
+-- INDEXES
+-- ============================================
+
+CREATE INDEX idx_store_customer_orders_store ON store_customer_orders(store_id);
+CREATE INDEX idx_store_customer_orders_customer ON store_customer_orders(customer_id);
+CREATE INDEX idx_store_customer_orders_status ON store_customer_orders(status);
+
+CREATE INDEX idx_store_customer_order_items_order ON store_customer_order_items(store_customer_order_id);
+CREATE INDEX idx_store_customer_order_items_product ON store_customer_order_items(product_id);
+
+CREATE INDEX idx_store_sales_store ON store_sales(store_id);
+CREATE INDEX idx_store_sales_customer_order ON store_sales(store_customer_order_id);
+CREATE INDEX idx_store_sales_date ON store_sales(sale_date);
+
+CREATE INDEX idx_product_exports_received_status ON product_exports(received_status);

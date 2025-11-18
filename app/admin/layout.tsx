@@ -73,6 +73,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       icon: '◉',
       items: [
         { name: 'Dashboard', path: '/admin/store/dashboard', icon: '▪' },
+        { name: 'Khách hàng', path: '/admin/store/customers', icon: '▪' },
+        { name: 'Đơn hàng khách', path: '/admin/store/customer-orders', icon: '▪' },
         { name: 'Bán hàng (POS)', path: '/admin/store/pos', icon: '▪' },
         { name: 'Kho cửa hàng', path: '/admin/store/warehouse', icon: '▪' },
         { name: 'Thu chi', path: '/admin/store/transactions', icon: '▪' },

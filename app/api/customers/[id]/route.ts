@@ -1,6 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+
+    const result = await pool.query(
+      `SELECT c.*, s.name as store_name
+       FROM customers c
+       LEFT JOIN stores s ON c.store_id = s.id
+       WHERE c.id = $1`,
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return NextResponse.json({ error: 'Không tìm thấy khách hàng' }, { status: 404 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      customer: result.rows[0],
+    });
+  } catch (error) {
+    console.error('Error fetching customer:', error);
+    return NextResponse.json(
+      { error: 'Có lỗi xảy ra khi lấy thông tin khách hàng' },
+      { status: 500 }
+    );
+  }
+}
+
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
